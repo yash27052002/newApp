@@ -4,7 +4,8 @@ import { NativeModules } from 'react-native';
 
 const { MyCallModule } = NativeModules;
 
-const ITEM_HEIGHT = 50; // Adjust this based on your contact item height
+const ITEM_HEIGHT = 50;
+const INITIAL_PAGE_SIZE = 50; // Initial contacts to load
 
 const ContactItem = () => {
     const theme = useColorScheme();
@@ -14,19 +15,20 @@ const ContactItem = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedContact, setSelectedContact] = useState(null);
     const [notes, setNotes] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
-    const fetchContacts = async () => {
-        setLoading(true);
+    const fetchContacts = async (page) => {
         try {
-            const contactsJson = await MyCallModule.getContacts(); // Remove page number
+            setLoading(true);
+            const contactsJson = await MyCallModule.getContacts(page, INITIAL_PAGE_SIZE); // Pass page and size
             const contactsArray = JSON.parse(contactsJson);
+    
             if (contactsArray.length > 0) {
                 setContacts(prevContacts => [...prevContacts, ...contactsArray]);
             } else {
-                setHasMore(false); // No more contacts to load
+                setHasMore(false); // No more contacts
             }
         } catch (error) {
             console.error("Error fetching contacts", error);
@@ -37,7 +39,7 @@ const ContactItem = () => {
     
 
     useEffect(() => {
-        fetchContacts(page);
+        fetchContacts(page); // Fetch contacts when page changes
     }, [page]);
 
     const loadMoreContacts = () => {
@@ -63,7 +65,7 @@ const ContactItem = () => {
                 {item.name}
             </Text>
             <TouchableOpacity onPress={() => openModal(item)}>
-                <Text style={styles.plus}>+</Text>
+                <Text style={[styles.plus, isDarkTheme ? styles.contactTextDark : styles.contactTextLight]}>+</Text>
             </TouchableOpacity>
         </View>
     ), [isDarkTheme]);
@@ -72,17 +74,20 @@ const ContactItem = () => {
 
     return (
         <View style={[styles.container, isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
-            <FlatList
-                data={contacts}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                onEndReached={loadMoreContacts}
-                onEndReachedThreshold={0.5}
-                getItemLayout={(data, index) => (
-                    { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
-                )}
-                ListFooterComponent={loading ? <ActivityIndicator size="large" color="#0000ff" /> : null}
-            />
+            {loading && contacts.length === 0 ? (
+                <ActivityIndicator size="large" color="#0000ff" />
+            ) : (
+                <FlatList
+                    data={contacts}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    onEndReached={loadMoreContacts}
+                    onEndReachedThreshold={0.5}
+                    getItemLayout={(data, index) => (
+                        { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
+                    )}
+                />
+            )}
 
             <Modal
                 transparent={true}
@@ -128,7 +133,6 @@ const styles = StyleSheet.create({
     },
     contactItem: {
         padding: 8,
-        borderBottomWidth: 1,
         width: '100%',
         justifyContent: 'space-between',
         flexDirection: 'row',
@@ -140,7 +144,7 @@ const styles = StyleSheet.create({
         color: 'black',
     },
     plus: {
-        fontSize: 30,
+        fontSize: 34,
     },
     modalContainer: {
         flex: 1,

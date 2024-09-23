@@ -59,6 +59,8 @@ const Dialer = () => {
         }
     };
 
+
+
     useEffect(() => {
         requestPermissions();
     }, []);
@@ -97,12 +99,15 @@ const Dialer = () => {
                     onFocus={() => {}} // Dummy function to allow focus
                 />
                 <TouchableOpacity style={styles.backspaceButton} onPress={handleBackspace}>
-                    <Text style={styles.backspaceText}>⌫</Text>
+                    <Text style={[styles.backspaceText, isDarkTheme ? styles.textDark : styles.textLight]}>⌫</Text>
                 </TouchableOpacity>
             </View>
             <NumPad setPhoneNumber={setPhoneNumber} />
             <TouchableOpacity style={styles.dialButton} onPress={handleDial}>
                 <Text style={styles.dialButtonText}>Call</Text>
+
+                
+
             </TouchableOpacity>
 
             {/* Modal for Call Confirmation */}
