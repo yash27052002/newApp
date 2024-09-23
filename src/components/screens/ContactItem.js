@@ -1,10 +1,12 @@
-import { View, Text, useColorScheme, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { View, Text, useColorScheme, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NativeModules } from 'react-native';
 
 const { MyCallModule } = NativeModules;
 
-export default function ContactItem() {
+const ITEM_HEIGHT = 50; // Adjust this based on your contact item height
+
+const ContactItem = () => {
     const theme = useColorScheme();
     const isDarkTheme = theme === 'dark';
 
@@ -12,20 +14,37 @@ export default function ContactItem() {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedContact, setSelectedContact] = useState(null);
     const [notes, setNotes] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
+    const fetchContacts = async () => {
+        setLoading(true);
+        try {
+            const contactsJson = await MyCallModule.getContacts(); // Remove page number
+            const contactsArray = JSON.parse(contactsJson);
+            if (contactsArray.length > 0) {
+                setContacts(prevContacts => [...prevContacts, ...contactsArray]);
+            } else {
+                setHasMore(false); // No more contacts to load
+            }
+        } catch (error) {
+            console.error("Error fetching contacts", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
 
     useEffect(() => {
-        const fetchContacts = async () => {
-            try {
-                const contactsJson = await MyCallModule.getContacts();
-                const contactsArray = JSON.parse(contactsJson);
-                setContacts(contactsArray);
-            } catch (error) {
-                console.error("Error fetching contacts", error);
-            }
-        };
+        fetchContacts(page);
+    }, [page]);
 
-        fetchContacts();
-    }, []);
+    const loadMoreContacts = () => {
+        if (hasMore && !loading) {
+            setPage(prevPage => prevPage + 1);
+        }
+    };
 
     const openModal = (contact) => {
         setSelectedContact(contact);
@@ -33,35 +52,36 @@ export default function ContactItem() {
     };
 
     const saveNotes = () => {
-        // Handle saving notes here
         console.log(`Notes for ${selectedContact.name}: ${notes}`);
         setModalVisible(false);
         setNotes('');
     };
 
-    const renderItem = ({ item }) => (
+    const renderItem = useCallback(({ item }) => (
         <View style={styles.contactItem}>
-            
             <Text style={[isDarkTheme ? styles.contactTextDark : styles.contactTextLight]}>
-                {item.name} 
+                {item.name}
             </Text>
             <TouchableOpacity onPress={() => openModal(item)}>
                 <Text style={styles.plus}>+</Text>
             </TouchableOpacity>
         </View>
-    );
+    ), [isDarkTheme]);
+
+    const keyExtractor = (item) => item.id;
 
     return (
-        <View
-            style={[
-                styles.container,
-                isDarkTheme ? styles.darkBackground : styles.lightBackground,
-            ]}
-        >
+        <View style={[styles.container, isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
             <FlatList
                 data={contacts}
-                keyExtractor={(item) => item.id}
+                keyExtractor={keyExtractor}
                 renderItem={renderItem}
+                onEndReached={loadMoreContacts}
+                onEndReachedThreshold={0.5}
+                getItemLayout={(data, index) => (
+                    { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
+                )}
+                ListFooterComponent={loading ? <ActivityIndicator size="large" color="#0000ff" /> : null}
             />
 
             <Modal
@@ -71,7 +91,7 @@ export default function ContactItem() {
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalContainer}>
-                    <View style={[styles.modalContent, isDarkTheme ? styles.darkBackground : styles.lightBackground,]}>
+                    <View style={[styles.modalContent, isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
                         <TextInput
                             placeholder='Add Notes'
                             value={notes}
@@ -82,7 +102,6 @@ export default function ContactItem() {
                             <TouchableOpacity style={styles.saveButton} onPress={saveNotes}>
                                 <Text style={styles.buttonText}>Save</Text>
                             </TouchableOpacity>
-
                             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.buttonText}>Close</Text>
                             </TouchableOpacity>
@@ -92,7 +111,7 @@ export default function ContactItem() {
             </Modal>
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -167,3 +186,5 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
+
+export default ContactItem;

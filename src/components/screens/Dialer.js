@@ -5,22 +5,25 @@ import { NativeModules } from 'react-native';
 const { MyCallModule } = NativeModules;
 
 const NumPad = ({ setPhoneNumber }) => {
+    const theme = useColorScheme();
+    const isDarkTheme = theme === 'dark';
+
     const handleNumPress = (num) => {
         setPhoneNumber(prev => prev + num);
     };
 
     return (
-        <View style={styles.numPadContainer}>
+        <View>
             <FlatList
                 data={[1, 2, 3, 4, 5, 6, 7, 8, 9, "*", 0, "#"]}
                 keyExtractor={(item) => item.toString()}
                 numColumns={3}
                 renderItem={({ item }) => (
                     <TouchableOpacity
-                        style={styles.numPadButton}
+                        style={[styles.numPadButton, isDarkTheme ? styles.buttonDark : styles.buttonLight]}
                         onPress={() => handleNumPress(item.toString())}
                     >
-                        <Text style={styles.numPadText}>{item}</Text>
+                        <Text style={[styles.numPadText, isDarkTheme ? styles.textDark : styles.textLight]}>{item}</Text>
                     </TouchableOpacity>
                 )}
             />
@@ -28,7 +31,7 @@ const NumPad = ({ setPhoneNumber }) => {
     );
 };
 
-const Dialer = ({ onClose }) => {
+const Dialer = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const theme = useColorScheme();
@@ -57,7 +60,7 @@ const Dialer = ({ onClose }) => {
     };
 
     useEffect(() => {
-        requestPermissions(); // Request permissions when component mounts
+        requestPermissions();
     }, []);
 
     const handleDial = async () => {
@@ -67,26 +70,36 @@ const Dialer = ({ onClose }) => {
         }
 
         try {
-            await MyCallModule.makeCall(phoneNumber); // Call your native module
+            await MyCallModule.makeCall(phoneNumber);
             console.log(`Dialing: ${phoneNumber}`);
             setTimeout(() => {
                 setModalVisible(true);
             }, 2000);
-            
         } catch (error) {
             console.error("Error making call", error);
         }
     };
 
+    const handleBackspace = () => {
+        setPhoneNumber(prev => prev.slice(0, -1));
+    };
+
     return (
-        <View style={[{ flex: 1, justifyContent: 'center', padding: 20 }, isDarkTheme ? { backgroundColor: 'black' } : { backgroundColor: 'white' }]}>
-            <TextInput
-                style={styles.input}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                
-            />
+        <View style={[styles.container, isDarkTheme ? styles.containerDark : styles.containerLight]}>
+            <View style={styles.inputContainer}>
+                <TextInput
+                    style={[styles.input, isDarkTheme ? styles.textDark : styles.textLight]}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    showSoftInputOnFocus={false} // Prevents keyboard
+                    editable={true} // Allow editing
+                    onFocus={() => {}} // Dummy function to allow focus
+                />
+                <TouchableOpacity style={styles.backspaceButton} onPress={handleBackspace}>
+                    <Text style={styles.backspaceText}>⌫</Text>
+                </TouchableOpacity>
+            </View>
             <NumPad setPhoneNumber={setPhoneNumber} />
             <TouchableOpacity style={styles.dialButton} onPress={handleDial}>
                 <Text style={styles.dialButtonText}>Call</Text>
@@ -100,10 +113,9 @@ const Dialer = ({ onClose }) => {
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalContainer}>
-                    <View style={[styles.modalContent , isDarkTheme ? { backgroundColor: 'black' } : { backgroundColor: 'white' }]}>
+                    <View style={[styles.modalContent, isDarkTheme ? styles.modalContentDark : styles.modalContentLight]}>
                         <Text style={styles.modalText}>Call placed to: {phoneNumber}</Text>
-
-                        <TextInput  placeholder=' Add Notes'/>
+                        <TextInput placeholder=' Add Notes' style={styles.noteInput} />
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.buttonText}>Save</Text>
@@ -121,12 +133,26 @@ const Dialer = ({ onClose }) => {
 };
 
 const styles = StyleSheet.create({
-    numPadContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+    container: { flex: 1, justifyContent: 'center', padding: 20 },
+    containerLight: { backgroundColor: 'white' },
+    containerDark: { backgroundColor: 'black' },
     numPadButton: { width: '33.33%', height: 60, justifyContent: 'center', alignItems: 'center' },
     numPadText: { fontSize: 24, fontWeight: 'bold' },
+    textLight: { color: 'black' },
+    textDark: { color: 'white' },
     dialButton: { backgroundColor: '#D1E9F6', paddingVertical: 20, paddingHorizontal: 20, borderRadius: 30, alignSelf: 'center', marginTop: 20 },
     dialButtonText: { color: 'black', fontSize: 12, fontWeight: 'bold' },
-    input: { height: 40, marginLeft: 100, padding: 4, fontSize: 20, marginBottom: 20, paddingHorizontal: 10 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+    input: { 
+        height: 40, 
+        flex: 1, 
+        padding: 4, 
+        fontSize: 20, 
+        paddingHorizontal: 15, 
+        textAlign: 'center',
+        letterSpacing:2 // Center the text
+    },    backspaceButton: { justifyContent: 'center', alignItems: 'center', padding: 10 },
+    backspaceText: { fontSize: 20 },
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -136,14 +162,16 @@ const styles = StyleSheet.create({
     modalContent: {
         width: '80%',
         padding: 20,
-        backgroundColor: 'white',
         borderRadius: 10,
         alignItems: 'center',
     },
+    modalContentLight: { backgroundColor: 'white' },
+    modalContentDark: { backgroundColor: 'black' },
     modalText: {
         fontSize: 18,
         marginBottom: 20,
     },
+    noteInput: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, width: '100%', padding: 8 },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
