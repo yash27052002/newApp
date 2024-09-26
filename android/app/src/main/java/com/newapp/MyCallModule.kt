@@ -17,8 +17,16 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
 import org.json.JSONArray
 import org.json.JSONObject
+import com.newapp.MyOverlayService
 
 class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+
+
+    @ReactMethod
+    fun startOverlayService() {
+        val intent = Intent(currentActivity, MyOverlayService::class.java)
+        currentActivity?.startService(intent)
+    }
 
     override fun getName(): String {
         return "MyCallModule"

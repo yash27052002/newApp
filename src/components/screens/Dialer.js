@@ -3,6 +3,8 @@ import { View, TextInput, StyleSheet, Text, useColorScheme, TouchableOpacity, Fl
 import { NativeModules } from 'react-native';
 
 const { MyCallModule } = NativeModules;
+const { MyOverlayService } = NativeModules;
+
 
 const NumPad = ({ setPhoneNumber }) => {
     const theme = useColorScheme();
@@ -31,9 +33,30 @@ const NumPad = ({ setPhoneNumber }) => {
     );
 };
 
+const FloatingOverlay = ({ isVisible, onClose }) => {
+    return (
+        <Modal
+            transparent={true}
+            animationType="slide"
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={styles.overlayContainer}>
+                <View style={styles.overlayContent}>
+                    <Text style={styles.overlayText}>Call in Progress</Text>
+                    <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Text style={styles.closeButtonText}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
 const Dialer = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
+    const [overlayVisible, setOverlayVisible] = useState(false);
     const theme = useColorScheme();
     const isDarkTheme = theme === 'dark';
 
@@ -42,28 +65,27 @@ const Dialer = () => {
             const permissions = [
                 PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
                 PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-                PermissionsAndroid.PERMISSIONS.CALL_PHONE
+                PermissionsAndroid.PERMISSIONS.CALL_PHONE,
             ];
 
             const granted = await PermissionsAndroid.requestMultiple(permissions);
-
-            if (granted[PermissionsAndroid.PERMISSIONS.READ_CONTACTS] === PermissionsAndroid.RESULTS.GRANTED &&
-                granted[PermissionsAndroid.PERMISSIONS.READ_CALL_LOG] === PermissionsAndroid.RESULTS.GRANTED &&
-                granted[PermissionsAndroid.PERMISSIONS.CALL_PHONE] === PermissionsAndroid.RESULTS.GRANTED) {
+            if (Object.values(granted).every(result => result === PermissionsAndroid.RESULTS.GRANTED)) {
                 console.log("All permissions granted");
             } else {
-                console.log("Permissions denied");
+                console.log("Some permissions denied");
             }
         } catch (err) {
             console.warn(err);
         }
     };
 
-
-
     useEffect(() => {
         requestPermissions();
     }, []);
+
+    const startOverlay = () => {
+        MyCallModule.startOverlayService();
+    };
 
     const handleDial = async () => {
         if (!phoneNumber) {
@@ -74,6 +96,8 @@ const Dialer = () => {
         try {
             await MyCallModule.makeCall(phoneNumber);
             console.log(`Dialing: ${phoneNumber}`);
+            setOverlayVisible(true); // Show overlay when the call is made
+            startOverlay();
             setTimeout(() => {
                 setModalVisible(true);
             }, 2000);
@@ -94,9 +118,9 @@ const Dialer = () => {
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     keyboardType="phone-pad"
-                    showSoftInputOnFocus={false} // Prevents keyboard
-                    editable={true} // Allow editing
-                    onFocus={() => {}} // Dummy function to allow focus
+                    showSoftInputOnFocus={false}
+                    editable={true}
+                    onFocus={() => {}}
                 />
                 <TouchableOpacity style={styles.backspaceButton} onPress={handleBackspace}>
                     <Text style={[styles.backspaceText, isDarkTheme ? styles.textDark : styles.textLight]}>⌫</Text>
@@ -105,9 +129,6 @@ const Dialer = () => {
             <NumPad setPhoneNumber={setPhoneNumber} />
             <TouchableOpacity style={styles.dialButton} onPress={handleDial}>
                 <Text style={styles.dialButtonText}>Call</Text>
-
-                
-
             </TouchableOpacity>
 
             {/* Modal for Call Confirmation */}
@@ -125,7 +146,6 @@ const Dialer = () => {
                             <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.buttonText}>Save</Text>
                             </TouchableOpacity>
-
                             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                 <Text style={styles.buttonText}>Close</Text>
                             </TouchableOpacity>
@@ -133,6 +153,9 @@ const Dialer = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Floating Overlay */}
+            <FloatingOverlay isVisible={overlayVisible} onClose={() => setOverlayVisible(false)} />
         </View>
     );
 };
@@ -155,8 +178,9 @@ const styles = StyleSheet.create({
         fontSize: 20, 
         paddingHorizontal: 15, 
         textAlign: 'center',
-        letterSpacing:2 // Center the text
-    },    backspaceButton: { justifyContent: 'center', alignItems: 'center', padding: 10 },
+        letterSpacing: 2,
+    },
+    backspaceButton: { justifyContent: 'center', alignItems: 'center', padding: 10 },
     backspaceText: { fontSize: 20 },
     modalContainer: {
         flex: 1,
@@ -199,6 +223,27 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         fontWeight: 'bold',
+    },
+    overlayContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    overlayContent: {
+        width: '80%',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        backgroundColor: 'white',
+    },
+    overlayText: {
+        fontSize: 18,
+        marginBottom: 20,
+    },
+    closeButtonText: {
+        fontWeight: 'bold',
+        color: 'black',
     },
 });
 

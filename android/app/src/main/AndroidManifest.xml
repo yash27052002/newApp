@@ -20,8 +20,6 @@
         android:theme="@style/AppTheme"
         android:supportsRtl="true">
 
-      
-
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
@@ -34,5 +32,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".MyOverlayService"
+            android:exported="false"/>
+        
     </application>
 </manifest>

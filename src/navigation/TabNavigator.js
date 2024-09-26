@@ -6,6 +6,7 @@ import CallLogsScreen from '../screens/CallLogsScreen';
 import ContactsScreen from '../screens/ContactsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import DialerScreen from '../screens/DialerScreen';
+import StackNavigator from './stackNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,7 +34,7 @@ const TabNavigator = () => {
             <Tab.Screen name="Call Logs" component={CallLogsScreen} />
             <Tab.Screen name="Dialer" component={DialerScreen} />
 
-            <Tab.Screen name="Contacts" component={ContactsScreen} />
+            <Tab.Screen name="Contacts" component={StackNavigator} />
 
 
         </Tab.Navigator>

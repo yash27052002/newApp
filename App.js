@@ -12,8 +12,8 @@ const App = () => {
             const permissions = [
                 PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
                 PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-                PermissionsAndroid.PERMISSIONS.CALL_PHONE
-            ];
+                PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+                ];
 
             const granted = await PermissionsAndroid.requestMultiple(permissions);
 
@@ -37,6 +37,7 @@ const App = () => {
     return (
         <NavigationContainer>
             <TabNavigator />
+            
         </NavigationContainer>
     );
 };

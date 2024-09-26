@@ -1,15 +1,17 @@
 import { View, Text, useColorScheme, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import { NativeModules } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const { MyCallModule } = NativeModules;
 
 const ITEM_HEIGHT = 50;
-const INITIAL_PAGE_SIZE = 50; // Initial contacts to load
+const INITIAL_PAGE_SIZE = 50;
 
 const ContactItem = () => {
     const theme = useColorScheme();
     const isDarkTheme = theme === 'dark';
+    const navigation = useNavigation();
 
     const [contacts, setContacts] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
@@ -22,13 +24,13 @@ const ContactItem = () => {
     const fetchContacts = async (page) => {
         try {
             setLoading(true);
-            const contactsJson = await MyCallModule.getContacts(page, INITIAL_PAGE_SIZE); // Pass page and size
+            const contactsJson = await MyCallModule.getContacts(page, INITIAL_PAGE_SIZE);
             const contactsArray = JSON.parse(contactsJson);
-    
+
             if (contactsArray.length > 0) {
                 setContacts(prevContacts => [...prevContacts, ...contactsArray]);
             } else {
-                setHasMore(false); // No more contacts
+                setHasMore(false);
             }
         } catch (error) {
             console.error("Error fetching contacts", error);
@@ -36,10 +38,9 @@ const ContactItem = () => {
             setLoading(false);
         }
     };
-    
 
     useEffect(() => {
-        fetchContacts(page); // Fetch contacts when page changes
+        fetchContacts(page);
     }, [page]);
 
     const loadMoreContacts = () => {
@@ -59,16 +60,23 @@ const ContactItem = () => {
         setNotes('');
     };
 
+    const navDetails = (contact) => {
+        navigation.navigate('ContactDetails', { contact });
+    };
+
     const renderItem = useCallback(({ item }) => (
         <View style={styles.contactItem}>
-            <Text style={[isDarkTheme ? styles.contactTextDark : styles.contactTextLight]}>
-                {item.name}
-            </Text>
-            <TouchableOpacity onPress={() => openModal(item)}>
+            <TouchableOpacity onPress={() => navDetails(item)} style={styles.nameContainer}>
+                <Text style={[isDarkTheme ? styles.contactTextDark : styles.contactTextLight]}>
+                    {item.name}
+                </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => openModal(item)} style={styles.plusContainer}>
                 <Text style={[styles.plus, isDarkTheme ? styles.contactTextDark : styles.contactTextLight]}>+</Text>
             </TouchableOpacity>
         </View>
-    ), [isDarkTheme]);
+    ), [isDarkTheme, navigation]);
 
     const keyExtractor = (item) => item.id;
 
@@ -143,6 +151,11 @@ const styles = StyleSheet.create({
     contactTextLight: {
         color: 'black',
     },
+    plusContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 10, // Increase padding for better touch area
+    },
     plus: {
         fontSize: 34,
     },
@@ -188,6 +201,11 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         textAlign: 'center',
+    },
+    nameContainer: {
+        flex: 1, // Use full available space
+        justifyContent: 'center',
+        paddingVertical: 1, // Add vertical padding for touch area
     },
 });
 
