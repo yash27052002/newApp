@@ -13,13 +13,17 @@ const App = () => {
                 PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
                 PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
                 PermissionsAndroid.PERMISSIONS.CALL_PHONE,
-                ];
+                PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, // Add this line
+            ];
 
             const granted = await PermissionsAndroid.requestMultiple(permissions);
 
-            if (granted[PermissionsAndroid.PERMISSIONS.READ_CONTACTS] === PermissionsAndroid.RESULTS.GRANTED &&
+            if (
+                granted[PermissionsAndroid.PERMISSIONS.READ_CONTACTS] === PermissionsAndroid.RESULTS.GRANTED &&
                 granted[PermissionsAndroid.PERMISSIONS.READ_CALL_LOG] === PermissionsAndroid.RESULTS.GRANTED &&
-                granted[PermissionsAndroid.PERMISSIONS.CALL_PHONE] === PermissionsAndroid.RESULTS.GRANTED) {
+                granted[PermissionsAndroid.PERMISSIONS.CALL_PHONE] === PermissionsAndroid.RESULTS.GRANTED &&
+                granted[PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE] === PermissionsAndroid.RESULTS.GRANTED // Check for READ_PHONE_STATE
+            ) {
                 console.log("All permissions granted");
             } else {
                 console.log("Permissions denied");
@@ -37,7 +41,6 @@ const App = () => {
     return (
         <NavigationContainer>
             <TabNavigator />
-            
         </NavigationContainer>
     );
 };

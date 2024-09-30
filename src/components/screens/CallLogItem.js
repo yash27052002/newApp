@@ -84,8 +84,28 @@ const CallLogItem = () => {
         }
     };
 
+    // useEffect(() => {
+    //     const checkOverlayPermission = async () => {
+    //       const canDraw = await MyCallModule.canDrawOverlays();
+    //       if (!canDraw) {
+    //         MyCallModule.requestOverlayPermission();
+    //       } else {
+    //         // Delay starting the overlay service by 6 seconds (6000 milliseconds)
+    //         MyCallModule.startOverlayService();
+    //       }
+    //     };
+    
+    //     checkOverlayPermission();
+    //   }, []);
+    
+      const startService = () => {
+        // Delay starting the overlay service by 6 seconds (6000 milliseconds)
+        MyCallModule.startOverlayService();
+      };
+
     const renderItem = ({ item }) => (
         <View style={styles.callLogItem}>
+        
             <TouchableOpacity style={styles.touchable} onPress={() => handleCall(item.number)}>
                 <View style={styles.iconContainer}>
                     {item.callType === 'incoming' && <Image source={require('../../assets/images/incoming.png')} style={styles.icon} />}

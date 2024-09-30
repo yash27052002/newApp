@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, NativeModules } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, NativeModules, useColorScheme } from 'react-native';
 
 const { MyCallModule } = NativeModules;
 
 const ContactDetails = ({ route }) => {
+
+    const theme = useColorScheme();
+    const isDarkTheme = theme === 'dark';
     const { contact } = route.params; // Get the contact from params
 
     const [letter, setLetter] = useState('');
@@ -27,7 +30,7 @@ const ContactDetails = ({ route }) => {
     }, [contact]);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container ,  isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
             <View style={styles.dpContainer}>
                 <Text style={styles.Dp}>{letter}</Text>
             </View>
@@ -77,6 +80,12 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 30,
+    },
+    darkBackground: {
+        backgroundColor: 'black',
+    },
+    lightBackground: {
+        backgroundColor: 'white',
     },
     phoneText: {
         fontSize: 18,
