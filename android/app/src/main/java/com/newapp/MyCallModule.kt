@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.provider.CallLog
 import android.provider.ContactsContract
@@ -15,16 +16,28 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.json.JSONArray
 import org.json.JSONObject
 import android.os.Build
-import android.util.Log
 import android.content.pm.PackageManager
 
 class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
+    private val callStateReceiver = CallStateReceiver()
+
+    init {
+        val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+        reactContext.registerReceiver(callStateReceiver, filter)
+    }
+
     override fun getName(): String {
         return "MyCallModule"
+    }
+
+    override fun onCatalystInstanceDestroy() {
+        super.onCatalystInstanceDestroy()
+        reactApplicationContext.unregisterReceiver(callStateReceiver) // Unregister the receiver
     }
 
     // Check if overlay permission is granted
@@ -214,5 +227,19 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         reactApplicationContext.startActivity(intent)
+    }
+
+    private inner class CallStateReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val state = intent?.getStringExtra(TelephonyManager.EXTRA_STATE)
+
+            if (state == TelephonyManager.EXTRA_STATE_IDLE) {
+                // Call has ended
+                val reactContext = context as ReactApplicationContext
+                reactContext
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("CallEnded", null) // Emit event to React Native
+            }
+        }
     }
 }

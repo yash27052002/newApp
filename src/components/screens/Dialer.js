@@ -140,7 +140,10 @@ const Dialer = () => {
             >
                 <View style={styles.modalContainer}>
                     <View style={[styles.modalContent, isDarkTheme ? styles.modalContentDark : styles.modalContentLight]}>
-                        <Text style={styles.modalText}>Call placed to: {phoneNumber}</Text>
+                        <Text style={styles.modalText}>Phone number: {phoneNumber}</Text>
+                        <TextInput placeholder=' Add name' style={styles.noteInput} />
+                        <TextInput placeholder=' Add email' style={styles.noteInput} />
+                        <TextInput placeholder=' Add phone number' style={styles.noteInput} />
                         <TextInput placeholder=' Add Notes' style={styles.noteInput} />
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
