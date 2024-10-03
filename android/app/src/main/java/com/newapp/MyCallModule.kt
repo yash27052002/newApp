@@ -1,4 +1,4 @@
-package com.newapp // Ensure this matches your actual package name
+package com.newapp
 
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -17,7 +17,7 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
 import org.json.JSONArray
 import org.json.JSONObject
-import android.os.Build // Importing Build
+import android.os.Build
 import android.util.Log
 import android.content.pm.PackageManager
 
@@ -47,6 +47,19 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
             )
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             reactApplicationContext.startActivity(intent)
+        }
+    }
+
+    // Open Overlay Permission Settings
+    @ReactMethod
+    fun openOverlaySettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:" + reactApplicationContext.packageName))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactApplicationContext.startActivity(intent)
+        } else {
+            Toast.makeText(reactApplicationContext, "Overlay permission is granted by default on this version.", Toast.LENGTH_LONG).show()
         }
     }
 
