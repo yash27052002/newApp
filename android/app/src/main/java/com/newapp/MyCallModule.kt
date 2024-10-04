@@ -1,4 +1,4 @@
-package com.newapp // Ensure this matches your actual package name
+package com.newapp
 
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -15,23 +15,60 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.json.JSONArray
 import org.json.JSONObject
-import android.os.Build // Importing Build
-import android.util.Log
+import android.os.Build
 import android.content.pm.PackageManager
+import android.content.IntentFilter
 
 class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
+    private val context: ReactApplicationContext = reactContext
+    private var callStateReceiver: CallStateReceiver? = null
+    private var listenerCount = 0
+
     override fun getName(): String {
         return "MyCallModule"
+    }
+
+    init {
+        // Register the CallStateReceiver
+        callStateReceiver = CallStateReceiver()
+        val intentFilter = IntentFilter()
+        intentFilter.addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+        context.registerReceiver(callStateReceiver, intentFilter)
+    }
+
+    // CallStateReceiver to listen for call state changes
+    private inner class CallStateReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+
+            if (state == TelephonyManager.EXTRA_STATE_IDLE) {
+                // Notify React Native when a call ends
+                sendEvent("CallEnded", null)
+            }
+        }
+    }
+
+    // Implementing addListener
+    fun addListener(eventName: String) {
+        if (eventName == "CallEnded") {
+            listenerCount++
+        }
+    }
+
+    // Implementing removeListeners
+    fun removeListeners(count: Int) {
+        listenerCount = (listenerCount - count).coerceAtLeast(0)
     }
 
     // Check if overlay permission is granted
     @ReactMethod
     fun canDrawOverlays(promise: Promise) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            promise.resolve(Settings.canDrawOverlays(reactApplicationContext))
+            promise.resolve(Settings.canDrawOverlays(context))
         } else {
             promise.resolve(true)
         }
@@ -43,10 +80,10 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + reactApplicationContext.packageName)
+                Uri.parse("package:" + context.packageName)
             )
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            reactApplicationContext.startActivity(intent)
+            context.startActivity(intent)
         }
     }
 
@@ -54,12 +91,12 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     @ReactMethod
     fun startOverlayService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (Settings.canDrawOverlays(reactApplicationContext)) {
-                val serviceIntent = Intent(reactApplicationContext, MyOverlayService::class.java)
+            if (Settings.canDrawOverlays(context)) {
+                val serviceIntent = Intent(context, MyOverlayService::class.java)
                 serviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                reactApplicationContext.startService(serviceIntent)
+                context.startService(serviceIntent)
             } else {
-                Toast.makeText(reactApplicationContext, "Overlay permission is required", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Overlay permission is required", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -67,22 +104,22 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     // Stop the OverlayService
     @ReactMethod
     fun stopOverlayService() {
-        val serviceIntent = Intent(reactApplicationContext, MyOverlayService::class.java)
-        reactApplicationContext.stopService(serviceIntent)
+        val serviceIntent = Intent(context, MyOverlayService::class.java)
+        context.stopService(serviceIntent)
     }
 
     @ReactMethod
     fun makeCall(phoneNumber: String) {
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        reactApplicationContext.startActivity(intent)
+        context.startActivity(intent)
     }
 
     @ReactMethod
     fun getContacts(page: Int, pageSize: Int, promise: Promise) {
         try {
             val contactsList = JSONArray()
-            val contentResolver: ContentResolver = reactApplicationContext.contentResolver
+            val contentResolver: ContentResolver = context.contentResolver
             val cursor = contentResolver.query(
                 ContactsContract.Contacts.CONTENT_URI,
                 null,
@@ -138,14 +175,14 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     @ReactMethod
     fun getCallLogs(promise: Promise) {
         // Check for READ_PHONE_STATE permission
-        if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+        if (context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
             promise.reject("Permission denied", "READ_PHONE_STATE permission is required to access call logs.")
             return
         }
 
         try {
             val callLogsList = JSONArray()
-            val contentResolver: ContentResolver = reactApplicationContext.contentResolver
+            val contentResolver: ContentResolver = context.contentResolver
             val cursor = contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 null,
@@ -200,6 +237,14 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        reactApplicationContext.startActivity(intent)
+        context.startActivity(intent)
+    }
+
+    private fun sendEvent(eventName: String, params: Any?) {
+        if (context.hasActiveCatalystInstance() && listenerCount > 0) {
+            context
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit(eventName, params)
+        }
     }
 }
