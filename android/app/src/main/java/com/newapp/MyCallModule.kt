@@ -1,11 +1,9 @@
 package com.newapp
 
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
 import android.provider.CallLog
 import android.provider.ContactsContract
@@ -16,7 +14,6 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise
-import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.json.JSONArray
 import org.json.JSONObject
 import android.os.Build
@@ -24,20 +21,8 @@ import android.content.pm.PackageManager
 
 class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
-    private val callStateReceiver = CallStateReceiver()
-
-    init {
-        val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
-        reactContext.registerReceiver(callStateReceiver, filter)
-    }
-
     override fun getName(): String {
         return "MyCallModule"
-    }
-
-    override fun onCatalystInstanceDestroy() {
-        super.onCatalystInstanceDestroy()
-        reactApplicationContext.unregisterReceiver(callStateReceiver) // Unregister the receiver
     }
 
     // Check if overlay permission is granted
@@ -222,24 +207,32 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     }
 
     @ReactMethod
+fun getUserPhoneNumber(promise: Promise) {
+    // Check for READ_PHONE_STATE permission
+    if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+        promise.reject("Permission denied", "READ_PHONE_STATE permission is required to access the phone number.")
+        return
+    }
+
+    try {
+        val telephonyManager = reactApplicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        val phoneNumber = telephonyManager.line1Number
+
+        if (phoneNumber != null) {
+            promise.resolve(phoneNumber)
+        } else {
+            promise.reject("Error", "Unable to retrieve phone number.")
+        }
+    } catch (e: Exception) {
+        promise.reject("Error", e)
+    }
+}
+
+    @ReactMethod
     fun openDefaultDialerSettings() {
         val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         reactApplicationContext.startActivity(intent)
-    }
-
-    private inner class CallStateReceiver : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val state = intent?.getStringExtra(TelephonyManager.EXTRA_STATE)
-
-            if (state == TelephonyManager.EXTRA_STATE_IDLE) {
-                // Call has ended
-                val reactContext = context as ReactApplicationContext
-                reactContext
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("CallEnded", null) // Emit event to React Native
-            }
-        }
     }
 }

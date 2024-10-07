@@ -1,12 +1,13 @@
 // App.js
 import React, { useEffect } from 'react';
-import { PermissionsAndroid, Alert } from 'react-native'; // Import PermissionsAndroid
+import { PermissionsAndroid, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider } from './src/context/ThemeContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import { NativeModules } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { MyCallModule } = NativeModules; // Import your custom module
+const { MyCallModule } = NativeModules;
 
 const App = () => {
     // Function to request permissions
@@ -17,6 +18,8 @@ const App = () => {
                 PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
                 PermissionsAndroid.PERMISSIONS.CALL_PHONE,
                 PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+                PermissionsAndroid.PERMISSIONS.READ_SMS, // Added
+                PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS
             ];
 
             const granted = await PermissionsAndroid.requestMultiple(permissions);
@@ -28,6 +31,8 @@ const App = () => {
                 granted[PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE] === PermissionsAndroid.RESULTS.GRANTED
             ) {
                 console.log("All permissions granted");
+                // Fetch the user's phone number
+                fetchUserPhoneNumber();
                 // Optionally check for overlay permission
                 checkOverlayPermission();
             } else {
@@ -35,6 +40,17 @@ const App = () => {
             }
         } catch (err) {
             console.warn(err);
+        }
+    };
+
+    // Function to fetch the user's phone number
+    const fetchUserPhoneNumber = async () => {
+        try {
+            const phoneNumber = await MyCallModule.getUserPhoneNumber();
+            console.log("User's phone number:", phoneNumber);
+            await AsyncStorage.setItem('phonenumber',phoneNumber);
+        } catch (error) {
+            console.error("Error fetching phone number:", error);
         }
     };
 
@@ -57,6 +73,7 @@ const App = () => {
     useEffect(() => {
         requestPermissions();
     }, []);
+
 
     return (
         <NavigationContainer>

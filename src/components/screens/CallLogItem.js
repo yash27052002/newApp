@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { NativeModules } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons'; // Ensure correct import
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { MyCallModule } = NativeModules;
 
@@ -17,6 +18,8 @@ const CallLogItem = () => {
     const [contactName, setContactName] = useState('');
     const [additionalNote, setAdditionalNote] = useState('');
 
+
+
     // Fetch call logs
     const fetchCallLogs = async () => {
         try {
@@ -28,8 +31,22 @@ const CallLogItem = () => {
         }
     };
 
+    const MyNumber = async () =>{
+        try {
+            const phoneNumber = await AsyncStorage.getItem('phonenumber')
+
+            const response = await axios.post(`https://6b9490bf-45f6-4708-8c45-81212d01e690.mock.pstmn.io//group`,{
+                phonenumber:phoneNumber
+            })
+            console.log("respons from phone number post api", response.data)
+        } catch(err){
+            console.log("error posting your phone numeber", err)
+        }
+    };
+
     useEffect(() => {
         fetchCallLogs(); // Initial fetch
+        MyNumber();
         const intervalId = setInterval(() => {
             fetchCallLogs();
         }, 5000); // Fetch logs every 5 seconds
@@ -83,6 +100,8 @@ const CallLogItem = () => {
             console.error("Error saving note:", err);
         }
     };
+
+    
 
     // useEffect(() => {
     //     const checkOverlayPermission = async () => {
