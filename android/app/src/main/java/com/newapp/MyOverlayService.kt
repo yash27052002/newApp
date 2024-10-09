@@ -3,6 +3,7 @@ package com.newapp
 import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -37,7 +38,7 @@ class MyOverlayService : Service() {
 
         // Create a FrameLayout for the overlay view
         overlayView = FrameLayout(this)
-        overlayView.setBackgroundColor(0xFFFFFFFF.toInt())
+        overlayView.setBackgroundColor(0xFF87CEEB.toInt()) // Sky blue background
 
         // Create a CardView for displaying API data
         val cardView = CardView(this).apply {
@@ -49,8 +50,16 @@ class MyOverlayService : Service() {
                 setMargins(20, 20, 20, 20)
             }
             radius = 16f  // Rounded corners
-            setCardBackgroundColor(0xFFFFFFFF.toInt())  // Background color
+            setCardBackgroundColor(0xFFFFFFFF.toInt())  // White background color
             cardElevation = 8f  // Elevation for shadow
+
+            // Set white borders to the top and bottom
+            val borderDrawable = GradientDrawable().apply {
+                setColor(0xFFFFFFFF.toInt()) // White color
+                setStroke(10, 0xFFFFFFFF.toInt()) // Thickness of the border
+                cornerRadius = 16f
+            }
+            background = borderDrawable
         }
 
         // Create and add a TextView for displaying API data
@@ -70,14 +79,15 @@ class MyOverlayService : Service() {
         cardView.addView(textView)
 
         // Create and add a close button (X)
-        val closeButton = ImageView(this)
-        closeButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)  // X icon
-        closeButton.layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.END  // Position at top right
-            setMargins(0, 20, 20, 0)  // Set margins: left, top, right, bottom
+        val closeButton = ImageView(this).apply {
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)  // X icon
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.END  // Position at top right
+                setMargins(0, 20, 20, 0)  // Set margins: left, top, right, bottom
+            }
         }
 
         // Set up the click listener for the close button
@@ -86,9 +96,9 @@ class MyOverlayService : Service() {
             stopSelf()
         }
 
-        // Add CardView and close button to the overlay view
-        overlayView.addView(cardView)
+        // Add close button to overlay view first, then CardView
         overlayView.addView(closeButton)
+        overlayView.addView(cardView)
 
         // Set layout parameters for the overlay
         val params = WindowManager.LayoutParams(
@@ -113,7 +123,7 @@ class MyOverlayService : Service() {
     private fun fetchDataFromApi() {
         val client = OkHttpClient()
         val request = Request.Builder()
-            .url("https://59ce90a6-8a50-4d6c-a859-b2995b664793.mock.pstmn.io/data/notes") // Your API URL
+            .url("https://46de960d-c8f2-4968-8908-e3557fc5065f.mock.pstmn.io/notes") // Your API URL
             .build()
 
         client.newCall(request).enqueue(object : Callback {

@@ -1,10 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
@@ -14,7 +14,6 @@
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>
 
-
     <application
         android:name=".MainApplication"
         android:label="@string/app_name"
@@ -22,22 +21,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
         android:theme="@style/AppTheme"
-        
         android:supportsRtl="true">
-         
 
-        <receiver android:name=".CallReceiver"
-        android:exported="true">
-    <intent-filter>
-        <action android:name="android.intent.action.PHONE_STATE" />
-    </intent-filter>
-</receiver>
+        <receiver android:name=".CallReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
 
         <service android:name=".MyOverlayService" />
-         <activity android:name=".OverlayActivity" />
-
-
-
+        <activity android:name=".OverlayActivity" />
 
         <activity
             android:name=".MainActivity"
@@ -52,7 +45,5 @@
             </intent-filter>
         </activity>
 
-        
-        
     </application>
 </manifest>

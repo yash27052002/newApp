@@ -227,6 +227,39 @@ fun getUserPhoneNumber(promise: Promise) {
         promise.reject("Error", e)
     }
 }
+@ReactMethod
+fun getIncomingCallerNumber(promise: Promise) {
+    // Check for READ_CALL_LOG permission
+    if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+        promise.reject("Permission denied", "READ_CALL_LOG permission is required to access the incoming caller number.")
+        return
+    }
+
+    try {
+        val callLogUri = CallLog.Calls.CONTENT_URI
+        val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE)
+        val sortOrder = "${CallLog.Calls.DATE} DESC"
+        val cursor = reactApplicationContext.contentResolver.query(callLogUri, projection, null, null, sortOrder)
+
+        cursor?.use {
+            while (it.moveToNext()) {
+                val number = it.getString(it.getColumnIndex(CallLog.Calls.NUMBER))
+                val type = it.getInt(it.getColumnIndex(CallLog.Calls.TYPE))
+
+                // Check if the call type is incoming
+                if (type == CallLog.Calls.INCOMING_TYPE) {
+                    promise.resolve(number) // Return the incoming caller number
+                    return
+                }
+            }
+        }
+
+        promise.reject("Error", "No incoming calls found.")
+    } catch (e: Exception) {
+        promise.reject("Error", e)
+    }
+}
+
 
     @ReactMethod
     fun openDefaultDialerSettings() {
