@@ -3,7 +3,6 @@ package com.newapp
 import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -52,17 +51,9 @@ class MyOverlayService : Service() {
             radius = 16f  // Rounded corners
             setCardBackgroundColor(0xFFFFFFFF.toInt())  // White background color
             cardElevation = 8f  // Elevation for shadow
-
-            // Set white borders to the top and bottom
-            val borderDrawable = GradientDrawable().apply {
-                setColor(0xFFFFFFFF.toInt()) // White color
-                setStroke(10, 0xFFFFFFFF.toInt()) // Thickness of the border
-                cornerRadius = 16f
-            }
-            background = borderDrawable
         }
 
-        // Create and add a TextView for displaying API data
+        // Create and add a TextView for displaying the incoming number
         textView = TextView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -115,15 +106,27 @@ class MyOverlayService : Service() {
 
         params.gravity = Gravity.CENTER
         windowManager.addView(overlayView, params)
-
-        // Fetch data from API
-        fetchDataFromApi()
     }
 
-    private fun fetchDataFromApi() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Get the incoming number and sender number from the Intent
+        val incomingNumber = intent?.getStringExtra("incoming_number")
+        val senderNumber = intent?.getStringExtra("sender_number") // Get sender number
+        val groupCode = intent?.getStringExtra("group_code") 
+
+        textView.text = "Incoming Call: $incomingNumber" // Display the incoming number
+
+        // Fetch data from API using the sender and receiver numbers
+        fetchDataFromApi(senderNumber ?: "", incomingNumber ?: "", groupCode ?: "")
+
+        return START_STICKY
+    }
+
+    private fun fetchDataFromApi(senderNumber: String, receiverNumber: String, groupCode: String) {
         val client = OkHttpClient()
+        val url = "http://13.127.211.81:8085/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber&groupCode=$groupCode"
         val request = Request.Builder()
-            .url("https://46de960d-c8f2-4968-8908-e3557fc5065f.mock.pstmn.io/notes") // Your API URL
+            .url(url) // Use the constructed URL
             .build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -170,10 +173,6 @@ class MyOverlayService : Service() {
         if (::windowManager.isInitialized && ::overlayView.isInitialized) {
             windowManager.removeView(overlayView)
         }
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
     }
 
     override fun onBind(intent: Intent?) = null

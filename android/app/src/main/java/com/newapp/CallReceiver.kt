@@ -11,15 +11,19 @@ import android.util.Log
 
 class CallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-         Log.d("CallReceiver", "Received intent: ${intent.action}")
+        Log.d("CallReceiver", "Received intent: ${intent.action}")
         if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
             val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-            Log.d("CallReceiver", "Phone state: $state")
+            val incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER) // Extract the incoming number
+            Log.d("CallReceiver", "Phone state: $state, Incoming number: $incomingNumber")
+
             if (state == TelephonyManager.EXTRA_STATE_RINGING) {
                 // Check for overlay permission before starting the service
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (Settings.canDrawOverlays(context)) {
-                        val serviceIntent = Intent(context, MyOverlayService::class.java)
+                        val serviceIntent = Intent(context, MyOverlayService::class.java).apply {
+                            putExtra("incoming_number", incomingNumber) // Pass the incoming number
+                        }
                         serviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startService(serviceIntent)
                     } else {
@@ -27,7 +31,9 @@ class CallReceiver : BroadcastReceiver() {
                     }
                 } else {
                     // For versions below Android Marshmallow, start the service directly
-                    val serviceIntent = Intent(context, MyOverlayService::class.java)
+                    val serviceIntent = Intent(context, MyOverlayService::class.java).apply {
+                        putExtra("incoming_number", incomingNumber) // Pass the incoming number
+                    }
                     context.startService(serviceIntent)
                 }
             }

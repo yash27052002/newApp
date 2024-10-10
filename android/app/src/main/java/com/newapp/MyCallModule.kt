@@ -61,17 +61,40 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         }
     }
 
-    // Start the OverlayService
+@ReactMethod
+fun startOverlayService(groupCode: String, promise: Promise) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Settings.canDrawOverlays(reactApplicationContext)) {
+            getUserPhoneNumber(promise) // Call method to get the phone number
+        } else {
+            promise.reject("Permission denied", "Overlay permission is required")
+        }
+    } else {
+        promise.reject("Unsupported Android Version", "Overlay services are not supported on this version.")
+    }
+}
+
+
+    // This method must be marked with @ReactMethod to be accessible from JavaScript
     @ReactMethod
-    fun startOverlayService() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (Settings.canDrawOverlays(reactApplicationContext)) {
-                val serviceIntent = Intent(reactApplicationContext, MyOverlayService::class.java)
-                serviceIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                reactApplicationContext.startService(serviceIntent)
+    fun getUserPhoneNumber(promise: Promise) {
+        // Check for READ_PHONE_STATE permission
+        if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            promise.reject("Permission denied", "READ_PHONE_STATE permission is required to access the phone number.")
+            return
+        }
+
+        try {
+            val telephonyManager = reactApplicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val phoneNumber = telephonyManager.line1Number
+
+            if (phoneNumber != null) {
+                promise.resolve(phoneNumber)
             } else {
-                Toast.makeText(reactApplicationContext, "Overlay permission is required", Toast.LENGTH_LONG).show()
+                promise.reject("Error", "Unable to retrieve phone number.")
             }
+        } catch (e: Exception) {
+            promise.reject("Error", e)
         }
     }
 
@@ -83,10 +106,15 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     }
 
     @ReactMethod
-    fun makeCall(phoneNumber: String) {
+    fun makeCall(phoneNumber: String, promise: Promise) {
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        reactApplicationContext.startActivity(intent)
+        try {
+            reactApplicationContext.startActivity(intent)
+            promise.resolve(null) // Resolve after making the call
+        } catch (e: Exception) {
+            promise.reject("Error", e)
+        }
     }
 
     @ReactMethod
@@ -148,9 +176,9 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
 
     @ReactMethod
     fun getCallLogs(promise: Promise) {
-        // Check for READ_PHONE_STATE permission
-        if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            promise.reject("Permission denied", "READ_PHONE_STATE permission is required to access call logs.")
+        // Check for READ_CALL_LOG permission
+        if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            promise.reject("Permission denied", "READ_CALL_LOG permission is required to access call logs.")
             return
         }
 
@@ -207,59 +235,37 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     }
 
     @ReactMethod
-fun getUserPhoneNumber(promise: Promise) {
-    // Check for READ_PHONE_STATE permission
-    if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-        promise.reject("Permission denied", "READ_PHONE_STATE permission is required to access the phone number.")
-        return
-    }
-
-    try {
-        val telephonyManager = reactApplicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val phoneNumber = telephonyManager.line1Number
-
-        if (phoneNumber != null) {
-            promise.resolve(phoneNumber)
-        } else {
-            promise.reject("Error", "Unable to retrieve phone number.")
+    fun getIncomingCallerNumber(promise: Promise) {
+        // Check for READ_CALL_LOG permission
+        if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            promise.reject("Permission denied", "READ_CALL_LOG permission is required to access the incoming caller number.")
+            return
         }
-    } catch (e: Exception) {
-        promise.reject("Error", e)
-    }
-}
-@ReactMethod
-fun getIncomingCallerNumber(promise: Promise) {
-    // Check for READ_CALL_LOG permission
-    if (reactApplicationContext.checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-        promise.reject("Permission denied", "READ_CALL_LOG permission is required to access the incoming caller number.")
-        return
-    }
 
-    try {
-        val callLogUri = CallLog.Calls.CONTENT_URI
-        val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE)
-        val sortOrder = "${CallLog.Calls.DATE} DESC"
-        val cursor = reactApplicationContext.contentResolver.query(callLogUri, projection, null, null, sortOrder)
+        try {
+            val callLogUri = CallLog.Calls.CONTENT_URI
+            val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE)
+            val sortOrder = "${CallLog.Calls.DATE} DESC"
+            val cursor = reactApplicationContext.contentResolver.query(callLogUri, projection, null, null, sortOrder)
 
-        cursor?.use {
-            while (it.moveToNext()) {
-                val number = it.getString(it.getColumnIndex(CallLog.Calls.NUMBER))
-                val type = it.getInt(it.getColumnIndex(CallLog.Calls.TYPE))
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val number = it.getString(it.getColumnIndex(CallLog.Calls.NUMBER))
+                    val type = it.getInt(it.getColumnIndex(CallLog.Calls.TYPE))
 
-                // Check if the call type is incoming
-                if (type == CallLog.Calls.INCOMING_TYPE) {
-                    promise.resolve(number) // Return the incoming caller number
-                    return
+                    // Check if the call type is incoming
+                    if (type == CallLog.Calls.INCOMING_TYPE) {
+                        promise.resolve(number) // Return the incoming caller number
+                        return
+                    }
                 }
             }
+
+            promise.reject("Error", "No incoming calls found.")
+        } catch (e: Exception) {
+            promise.reject("Error", e)
         }
-
-        promise.reject("Error", "No incoming calls found.")
-    } catch (e: Exception) {
-        promise.reject("Error", e)
     }
-}
-
 
     @ReactMethod
     fun openDefaultDialerSettings() {
