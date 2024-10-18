@@ -82,7 +82,7 @@ const CallLogItem = () => {
             console.log(senderNumber)
             const groupCode = await AsyncStorage.getItem("GroupCode");
             console.log("group code", groupCode)
-            const response = await axios.post(`http://13.127.211.81:8085/notes/saveNotes`, {
+            const response = await axios.post(`https://www.annulartech.net/notes/saveNotes`, {
                 senderNumber: String(senderNumber),
                 receiverNumber: String(number),
                 groupCode: String(groupCode),

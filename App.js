@@ -10,7 +10,7 @@ import TabNavigator from './src/navigation/TabNavigator';
 const { MyCallModule } = NativeModules;
 
 const App = () => {
-    const [dialogVisible, setDialogVisible] = useState(true);
+    const [dialogVisible, setDialogVisible] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
     const handleInput = async () => {
@@ -61,7 +61,7 @@ const App = () => {
         try {
             const phoneNumber = await AsyncStorage.getItem('phonenumber');
             console.log(phoneNumber);
-            const response = await axios.get(`http://13.127.211.81:8085/group/getGroupCodeByMobileNumber?mobileNumber=${phoneNumber}`);
+            const response = await axios.get(`https://www.annulartech.net/group/getGroupCodeByMobileNumber?mobileNumber=${phoneNumber}`);
             const groupCode = response.data.data.groupCode;
             console.log("Response from phone number post API:", response.data);
         } catch (err) {
@@ -86,17 +86,30 @@ const App = () => {
     const groupCode = async () => {
         try {
             await AsyncStorage.setItem("GroupCode", inputValue);
-            const response = await axios.get(`http://13.127.211.81:8085/caller/getGroupCodeCheck?groupCode=${inputValue}`);
+    
+            // Make API request to check group code
+            const response = await axios.get(`https://www.annulartech.net/caller/getGroupCodeCheck?groupCode=${inputValue}`);
             console.log("Response for the group code:", response.data);
-
-            if (response.data.success) {
-                await AsyncStorage.setItem('groupCodeEntered', 'true');
-                // Start the overlay service after setting the group code
-                startOverlayService();
+    
+            if (response.data.message === "fail") {
+                // Show an alert indicating the group code was not found
+                Alert.alert('Error', `Group code not found: ${inputValue}`);
+    
+                // Do NOT close the dialog box; keep it open for the user to retry
+            } else {
+                // Show an alert for success
+                Alert.alert(`Success ${inputValue}`, 'You are now in a group!');
+    
+                // Store that the group code was successfully entered
+                await AsyncStorage.setItem('groupCodeEntered', 'true');    
+                // Close the dialog box (or handle input, as you're referring to it)
+                handleInput();
             }
-            handleInput();
         } catch (error) {
             console.log("Error", error);
+    
+            // Handle unexpected errors with an alert
+            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
         }
     };
 

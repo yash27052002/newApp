@@ -124,7 +124,7 @@ class MyOverlayService : Service() {
 
     private fun fetchDataFromApi(senderNumber: String, receiverNumber: String, groupCode: String) {
         val client = OkHttpClient()
-        val url = "http://13.127.211.81:8085/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber&groupCode=$groupCode"
+        val url = "https://www.annulartech.net/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber&groupCode=$groupCode"
         val request = Request.Builder()
             .url(url) // Use the constructed URL
             .build()
@@ -140,7 +140,13 @@ class MyOverlayService : Service() {
 
             override fun onResponse(call: Call, response: Response) {
                 response.use {
-                    if (!it.isSuccessful) throw IOException("Unexpected code $it")
+                    if (!it.isSuccessful) {
+                        // Update UI on the main thread if response is not successful
+                        mainHandler.post {
+                            textView.text = "Unexpected response: ${it.code}"
+                        }
+                        return
+                    }
 
                     // Get the response data
                     val responseData = it.body?.string()
