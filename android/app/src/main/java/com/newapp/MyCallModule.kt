@@ -61,18 +61,6 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         }
     }
 
-@ReactMethod
-fun startOverlayService(groupCode: String, promise: Promise) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        if (Settings.canDrawOverlays(reactApplicationContext)) {
-            getUserPhoneNumber(promise) // Call method to get the phone number
-        } else {
-            promise.reject("Permission denied", "Overlay permission is required")
-        }
-    } else {
-        promise.reject("Unsupported Android Version", "Overlay services are not supported on this version.")
-    }
-}
 
 
     // This method must be marked with @ReactMethod to be accessible from JavaScript

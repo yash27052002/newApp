@@ -83,9 +83,7 @@ const Dialer = () => {
         requestPermissions();
     }, []);
 
-    const startOverlay = () => {
-        MyCallModule.startOverlayService();
-    };
+
 
     const handleDial = async () => {
         if (!phoneNumber) {
@@ -97,7 +95,6 @@ const Dialer = () => {
             await MyCallModule.makeCall(phoneNumber);
             console.log(`Dialing: ${phoneNumber}`);
             setOverlayVisible(true); // Show overlay when the call is made
-            startOverlay();
             setTimeout(() => {
                 setModalVisible(true);
             }, 2000);

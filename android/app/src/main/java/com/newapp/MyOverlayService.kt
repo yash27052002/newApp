@@ -94,7 +94,7 @@ class MyOverlayService : Service() {
         // Set layout parameters for the overlay
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,  // Width
-            600,  // Height (fixed value in pixels)
+            WindowManager.LayoutParams.WRAP_CONTENT,  // Height (wrap content)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -104,27 +104,26 @@ class MyOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         )
 
-        params.gravity = Gravity.CENTER
+        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL // Centered at the top
         windowManager.addView(overlayView, params)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Get the incoming number and sender number from the Intent
-        val incomingNumber = intent?.getStringExtra("incoming_number")
-        val senderNumber = intent?.getStringExtra("sender_number") // Get sender number
-        val groupCode = intent?.getStringExtra("group_code") 
+        // Get the incoming number from the Intent
+        val incomingNumber = intent?.getStringExtra("incoming_number") ?: "Unknown Number"
+        val senderNumber = "1234567890" // Replace with actual sender number if available
 
         textView.text = "Incoming Call: $incomingNumber" // Display the incoming number
 
-        // Fetch data from API using the sender and receiver numbers
-        fetchDataFromApi(senderNumber ?: "", incomingNumber ?: "", groupCode ?: "")
+        // Fetch data from API using the incoming number and sender number
+        fetchDataFromApi(senderNumber, incomingNumber)
 
         return START_STICKY
     }
 
-    private fun fetchDataFromApi(senderNumber: String, receiverNumber: String, groupCode: String) {
+    private fun fetchDataFromApi(senderNumber: String, receiverNumber: String) {
         val client = OkHttpClient()
-        val url = "https://www.annulartech.net/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber&groupCode=$groupCode"
+        val url = "https://www.annulartech.net/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber"
         val request = Request.Builder()
             .url(url) // Use the constructed URL
             .build()
