@@ -113,24 +113,17 @@ const App = () => {
         }
     };
 
-    const startOverlayService = async () => {
+    const fetchAndStoreGroupCode = async () => {
         try {
             const groupCode = await AsyncStorage.getItem('GroupCode');
-            const phoneNumber = await AsyncStorage.getItem('phonenumber');
-    
-            if (groupCode && phoneNumber) {
-                MyCallModule.startOverlayService(groupCode, phoneNumber); // Pass both groupCode and phoneNumber
-                console.log("Overlay service started with group code:", groupCode, "and phone number:", phoneNumber);
+            if (groupCode) {
+                MyCallModule.getGroupCode(groupCode); // Call the Kotlin method to store the group code
+                console.log("Group code stored:", groupCode);
             } else {
-                if (!groupCode) {
-                    console.warn("Group code not found");
-                }
-                if (!phoneNumber) {
-                    console.warn("Phone number not found");
-                }
+                console.warn("Group code not found");
             }
         } catch (error) {
-            console.error("Failed to start overlay service:", error);
+            console.error("Failed to fetch and store group code:", error);
         }
     };
     
@@ -145,7 +138,7 @@ const App = () => {
         requestPermissions();
         MyNumber();
         checkIfGroupCodeEntered();
-        startOverlayService();
+        fetchAndStoreGroupCode();
     }, []);
 
     return (

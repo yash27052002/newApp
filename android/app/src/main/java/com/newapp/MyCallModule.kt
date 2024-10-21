@@ -18,8 +18,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 import android.os.Build
 import android.content.pm.PackageManager
+import android.util.Log // Add this import
 
 class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
+
+    private val sharedPreferences = reactApplicationContext.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE) // Initialize sharedPreferences
+    private val callReceiver = CallReceiver()
 
     override fun getName(): String {
         return "MyCallModule"
@@ -61,9 +65,6 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         }
     }
 
-
-
-    // This method must be marked with @ReactMethod to be accessible from JavaScript
     @ReactMethod
     fun getUserPhoneNumber(promise: Promise) {
         // Check for READ_PHONE_STATE permission
@@ -77,6 +78,13 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
             val phoneNumber = telephonyManager.line1Number
 
             if (phoneNumber != null) {
+                // Save phone number in SharedPreferences
+                val editor = sharedPreferences.edit()
+                editor.putString("userPhoneNumber", phoneNumber)
+                editor.apply()
+
+                callReceiver.setsenderNumber(phoneNumber) 
+                // Resolve the promise with the phone number
                 promise.resolve(phoneNumber)
             } else {
                 promise.reject("Error", "Unable to retrieve phone number.")
@@ -86,20 +94,15 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         }
     }
 
-@ReactMethod
-fun startOverlayService(groupCode: String, phoneNumber: String, promise: Promise) {
-    // Start the overlay service with the provided group code and phone number
-    val serviceIntent = Intent(reactApplicationContext, MyOverlayService::class.java).apply {
-        putExtra("groupCode", groupCode) // Pass the group code
-        putExtra("phoneNumber", phoneNumber) // Pass the provided phone number
+    @ReactMethod
+    fun getGroupCode(groupCode: String) {
+        // Store the group code in SharedPreferences
+        val editor = sharedPreferences.edit()
+        editor.putString("groupCode", groupCode)
+        editor.apply()
+
+        Log.d("MyCallModule", "Group code saved: $groupCode")
     }
-    reactApplicationContext.startService(serviceIntent)
-    promise.resolve(null) // Resolve immediately after starting the service
-}
-
-
-
-
 
     // Stop the OverlayService
     @ReactMethod
@@ -246,35 +249,27 @@ fun startOverlayService(groupCode: String, phoneNumber: String, promise: Promise
         }
 
         try {
-            val callLogUri = CallLog.Calls.CONTENT_URI
-            val projection = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE)
-            val sortOrder = "${CallLog.Calls.DATE} DESC"
-            val cursor = reactApplicationContext.contentResolver.query(callLogUri, projection, null, null, sortOrder)
+            // Use CallLog to retrieve the last incoming call
+            val contentResolver: ContentResolver = reactApplicationContext.contentResolver
+            val cursor = contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                null,
+                "${CallLog.Calls.TYPE} = ?",
+                arrayOf(CallLog.Calls.INCOMING_TYPE.toString()),
+                "${CallLog.Calls.DATE} DESC LIMIT 1"
+            )
 
             cursor?.use {
-                while (it.moveToNext()) {
-                    val number = it.getString(it.getColumnIndex(CallLog.Calls.NUMBER))
-                    val type = it.getInt(it.getColumnIndex(CallLog.Calls.TYPE))
-
-                    // Check if the call type is incoming
-                    if (type == CallLog.Calls.INCOMING_TYPE) {
-                        promise.resolve(number) // Return the incoming caller number
-                        return
-                    }
+                if (it.moveToFirst()) {
+                    val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
+                    val incomingNumber = it.getString(numberIndex)
+                    promise.resolve(incomingNumber)
+                } else {
+                    promise.reject("Error", "No incoming calls found.")
                 }
             }
-
-            promise.reject("Error", "No incoming calls found.")
         } catch (e: Exception) {
             promise.reject("Error", e)
         }
-    }
-
-    @ReactMethod
-    fun openDefaultDialerSettings() {
-        val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        reactApplicationContext.startActivity(intent)
     }
 }
