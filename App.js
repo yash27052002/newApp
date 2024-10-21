@@ -116,17 +116,24 @@ const App = () => {
     const startOverlayService = async () => {
         try {
             const groupCode = await AsyncStorage.getItem('GroupCode');
-
-            if (groupCode) {
-                MyCallModule.startOverlayService({ group_code: groupCode });
-                console.log("Overlay service started with group code:", groupCode);
+            const phoneNumber = await AsyncStorage.getItem('phonenumber');
+    
+            if (groupCode && phoneNumber) {
+                MyCallModule.startOverlayService(groupCode, phoneNumber); // Pass both groupCode and phoneNumber
+                console.log("Overlay service started with group code:", groupCode, "and phone number:", phoneNumber);
             } else {
-                console.warn("Group code not found");
+                if (!groupCode) {
+                    console.warn("Group code not found");
+                }
+                if (!phoneNumber) {
+                    console.warn("Phone number not found");
+                }
             }
         } catch (error) {
             console.error("Failed to start overlay service:", error);
         }
     };
+    
 
     useEffect(() => {
         const checkIfGroupCodeEntered = async () => {
@@ -138,6 +145,7 @@ const App = () => {
         requestPermissions();
         MyNumber();
         checkIfGroupCodeEntered();
+        startOverlayService();
     }, []);
 
     return (

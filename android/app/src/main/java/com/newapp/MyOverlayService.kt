@@ -21,6 +21,7 @@ import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import android.util.Log
 
 class MyOverlayService : Service() {
 
@@ -108,70 +109,90 @@ class MyOverlayService : Service() {
         windowManager.addView(overlayView, params)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Get the incoming number from the Intent
-        val incomingNumber = intent?.getStringExtra("incoming_number") ?: "Unknown Number"
-        val senderNumber = "1234567890" // Replace with actual sender number if available
+override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    // Get the incoming number, sender number, and group code from the Intent
+    val incomingNumber = intent?.getStringExtra("incoming_number") ?: "Unknown Number"
+    val senderNumber = intent?.getStringExtra("phoneNumber") ?: "Unknown Sender"
+    val groupCode = intent?.getStringExtra("groupCode") ?: "Unknown GroupCode"
 
-        textView.text = "Incoming Call: $incomingNumber" // Display the incoming number
+    textView.text = "Incoming Call: $incomingNumber" // Display the incoming number
 
-        // Fetch data from API using the incoming number and sender number
-        fetchDataFromApi(senderNumber, incomingNumber)
+    // Fetch data from API using the incoming number, sender number, and group code
+    fetchDataFromApi(senderNumber, incomingNumber, groupCode)
 
-        return START_STICKY
-    }
+    return START_STICKY
+}
 
-    private fun fetchDataFromApi(senderNumber: String, receiverNumber: String) {
-        val client = OkHttpClient()
-        val url = "https://www.annulartech.net/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber"
-        val request = Request.Builder()
-            .url(url) // Use the constructed URL
-            .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-                // Update UI with an error message
-                mainHandler.post {
-                    textView.text = "Error fetching data"
-                }
+private fun fetchDataFromApi(senderNumber: String, receiverNumber: String, groupCode: String) {
+    val client = OkHttpClient()
+    val url = "https://www.annulartech.net/notes/getNotes?senderNumber=$senderNumber&receiverNumber=$receiverNumber&groupCode=$groupCode"
+    val request = Request.Builder()
+        .url(url)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+            mainHandler.post {
+                textView.text = "Error fetching data"
             }
+        }
 
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!it.isSuccessful) {
-                        // Update UI on the main thread if response is not successful
-                        mainHandler.post {
-                            textView.text = "Unexpected response: ${it.code}"
-                        }
-                        return
-                    }
-
-                    // Get the response data
-                    val responseData = it.body?.string()
-
-                    // Update the UI on the main thread
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                if (!it.isSuccessful) {
                     mainHandler.post {
+                        textView.text = "Unexpected response: ${it.code}"
+                    }
+                    return
+                }
+
+                // Get the response data
+                val responseData = it.body?.string()
+                mainHandler.post {
+                    Log.d("MyOverlayService", "Response Data: $responseData")
+                    if (responseData != null) {
                         try {
                             val jsonObject = JSONObject(responseData)
-                            val dataArray: JSONArray = jsonObject.getJSONArray("data")
-
-                            // Build the display string
                             val displayData = StringBuilder()
-                            for (i in 0 until dataArray.length()) {
-                                val item = dataArray.getString(i)
-                                displayData.append("$item\n")
+
+                            // Check if "data" array exists
+                            if (jsonObject.has("data")) {
+                                val dataArray: JSONArray = jsonObject.getJSONArray("data")
+
+                                // Build the display string for notes
+                                for (i in 0 until dataArray.length()) {
+                                    val item = dataArray.getString(i)
+                                    displayData.append("$item\n")
+                                }
+                            } 
+
+                            // Check if there's a message in the response
+                            if (jsonObject.has("message")) {
+                                val message = jsonObject.getString("message")
+                                displayData.append(message) // Append the message if it exists
+                            }
+
+                            // If no data or message, show a default message
+                            if (displayData.isEmpty()) {
+                                displayData.append("No notes or messages available.")
                             }
 
                             textView.text = displayData.toString()
                         } catch (e: Exception) {
-                            textView.text = "Error parsing data"
+                            e.printStackTrace()
+                            textView.text = "Error parsing data: ${e.message}"
                         }
+                    } else {
+                        textView.text = "Error: No response data"
                     }
                 }
             }
-        })
-    }
+        }
+    })
+}
+
 
     override fun onDestroy() {
         super.onDestroy()

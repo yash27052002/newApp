@@ -86,6 +86,21 @@ class MyCallModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
         }
     }
 
+@ReactMethod
+fun startOverlayService(groupCode: String, phoneNumber: String, promise: Promise) {
+    // Start the overlay service with the provided group code and phone number
+    val serviceIntent = Intent(reactApplicationContext, MyOverlayService::class.java).apply {
+        putExtra("groupCode", groupCode) // Pass the group code
+        putExtra("phoneNumber", phoneNumber) // Pass the provided phone number
+    }
+    reactApplicationContext.startService(serviceIntent)
+    promise.resolve(null) // Resolve immediately after starting the service
+}
+
+
+
+
+
     // Stop the OverlayService
     @ReactMethod
     fun stopOverlayService() {
