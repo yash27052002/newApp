@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet, Text, useColorScheme, TouchableOpacity, FlatList, PermissionsAndroid, Modal } from 'react-native';
 import { NativeModules } from 'react-native';
@@ -33,31 +35,16 @@ const NumPad = ({ setPhoneNumber }) => {
     );
 };
 
-const FloatingOverlay = ({ isVisible, onClose }) => {
-    return (
-        <Modal
-            transparent={true}
-            animationType="slide"
-            visible={isVisible}
-            onRequestClose={onClose}
-        >
-            <View style={styles.overlayContainer}>
-                <View style={styles.overlayContent}>
-                    <Text style={styles.overlayText}>Call in Progress</Text>
-                    <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Text style={styles.closeButtonText}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
-    );
-};
 
 const Dialer = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [overlayVisible, setOverlayVisible] = useState(false);
     const theme = useColorScheme();
+    const [additionalNote, setAdditionalNote] = useState('');
+    const [selectedLog, setSelectedLog] = useState(null);
+
+
     const isDarkTheme = theme === 'dark';
 
     const requestPermissions = async () => {
@@ -82,6 +69,37 @@ const Dialer = () => {
     useEffect(() => {
         requestPermissions();
     }, []);
+    const handleSaveNotes = async (number) => {
+        
+        
+        try {
+            console.log(number)
+            const senderNumber= await AsyncStorage.getItem('phonenumber');
+            console.log(senderNumber)
+            const groupCode = await AsyncStorage.getItem("GroupCode");
+            console.log("group code", groupCode)
+            let formattedNumber = number.startsWith('+91') ? number : `+91${number}`;
+            const response = await axios.post(`https://www.annulartech.net/notes/saveNotes`, {
+                senderNumber: String(senderNumber),
+                receiverNumber: String(formattedNumber),
+                groupCode: String(groupCode),
+                notes: String(additionalNote) // Use the actual note input
+            }, {
+                headers: {
+                    'Content-Type': 'application/json' // Ensure the content type is set
+                }
+            });
+    
+            console.log("Note saved successfully:", response.data);
+            console.log(formattedNumber);
+
+            setAdditionalNote(''); // Clear input
+            setModalVisible(false); // Close notes modal
+            setSelectedLog(null); // Reset selected log
+        } catch (err) {
+            console.error("Error saving note:", err);
+        }
+    };
 
 
 
@@ -141,9 +159,12 @@ const Dialer = () => {
                         <TextInput placeholder=' Add name' style={styles.noteInput} />
                         <TextInput placeholder=' Add email' style={styles.noteInput} />
                         <TextInput placeholder=' Add phone number' style={styles.noteInput} />
-                        <TextInput placeholder=' Add Notes' style={styles.noteInput} />
+                        <TextInput placeholder=' Add Notes' 
+                        style={styles.noteInput} 
+                        value={additionalNote}
+                        onChangeText={text => setAdditionalNote(text)} />
                         <View style={styles.buttonContainer}>
-                            <TouchableOpacity style={styles.saveButton} onPress={() => setModalVisible(false)}>
+                            <TouchableOpacity style={styles.saveButton} onPress={() => handleSaveNotes(phoneNumber)}>
                                 <Text style={styles.buttonText}>Save</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
@@ -155,7 +176,6 @@ const Dialer = () => {
             </Modal>
 
             {/* Floating Overlay */}
-            <FloatingOverlay isVisible={overlayVisible} onClose={() => setOverlayVisible(false)} />
         </View>
     );
 };

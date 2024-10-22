@@ -29,6 +29,8 @@ const ContactDetails = ({ route }) => {
         FirstLetter();
     }, [contact]);
 
+    
+
     return (
         <View style={[styles.container ,  isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
             <View style={styles.dpContainer}>

@@ -151,7 +151,6 @@ const App = () => {
                     value={inputValue}
                     onChangeText={setInputValue}
                 />
-                <Dialog.Button label="Cancel" onPress={() => setDialogVisible(false)} />
                 <Dialog.Button label="OK" onPress={groupCode} />
             </Dialog.Container>
         </NavigationContainer>

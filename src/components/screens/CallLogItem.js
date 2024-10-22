@@ -104,28 +104,7 @@ const CallLogItem = () => {
             console.error("Error saving note:", err);
         }
     };
-    
-
-    
-
-    // useEffect(() => {
-    //     const checkOverlayPermission = async () => {
-    //       const canDraw = await MyCallModule.canDrawOverlays();
-    //       if (!canDraw) {
-    //         MyCallModule.requestOverlayPermission();
-    //       } else {
-    //         // Delay starting the overlay service by 6 seconds (6000 milliseconds)
-    //         MyCallModule.startOverlayService();
-    //       }
-    //     };
-    
-    //     checkOverlayPermission();
-    //   }, []);
-    
-      const startService = () => {
-        // Delay starting the overlay service by 6 seconds (6000 milliseconds)
-        MyCallModule.startOverlayService();
-      };
+ 
 
     const renderItem = ({ item }) => (
         <View style={styles.callLogItem}>
@@ -205,6 +184,14 @@ const CallLogItem = () => {
     value={additionalNote}
     onChangeText={text => setAdditionalNote(text)} // Updated to directly set state
 />
+<TextInput
+    style={styles.textInput}
+    placeholder='email'
+    value={contactName}
+    onChangeText={text => setContactName(text)} // Updated to directly set state
+/>
+
+
 
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity

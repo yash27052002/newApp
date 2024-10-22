@@ -1,6 +1,7 @@
 import { View, Text, useColorScheme, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import { NativeModules } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 const { MyCallModule } = NativeModules;
@@ -14,6 +15,8 @@ const ContactItem = () => {
     const navigation = useNavigation();
 
     const [contacts, setContacts] = useState([]);
+    const [filteredContacts, setFilteredContacts] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedContact, setSelectedContact] = useState(null);
     const [notes, setNotes] = useState('');
@@ -21,6 +24,24 @@ const ContactItem = () => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
 
+    // Load contacts from AsyncStorage or fetch if not available
+    const loadContacts = async () => {
+        try {
+            setLoading(true);
+            const storedContacts = await AsyncStorage.getItem('contacts');
+            if (storedContacts) {
+                setContacts(JSON.parse(storedContacts)); // Load cached contacts
+            } else {
+                fetchContacts(page); // Fetch from the module if not cached
+            }
+        } catch (error) {
+            console.error("Error loading contacts", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch contacts from native module and store them
     const fetchContacts = async (page) => {
         try {
             setLoading(true);
@@ -28,7 +49,9 @@ const ContactItem = () => {
             const contactsArray = JSON.parse(contactsJson);
 
             if (contactsArray.length > 0) {
-                setContacts(prevContacts => [...prevContacts, ...contactsArray]);
+                const newContacts = [...contacts, ...contactsArray];
+                setContacts(newContacts);
+                await AsyncStorage.setItem('contacts', JSON.stringify(newContacts)); // Cache contacts
             } else {
                 setHasMore(false);
             }
@@ -40,12 +63,25 @@ const ContactItem = () => {
     };
 
     useEffect(() => {
-        fetchContacts(page);
-    }, [page]);
+        loadContacts(); // Load contacts when component mounts
+    }, []);
+
+    useEffect(() => {
+        if (searchQuery === '') {
+            setFilteredContacts(contacts);
+        } else {
+            setFilteredContacts(
+                contacts.filter(contact =>
+                    contact.name.toLowerCase().startsWith(searchQuery.toLowerCase()) // Check only the first letter
+                )
+            );
+        }
+    }, [searchQuery, contacts]);
 
     const loadMoreContacts = () => {
         if (hasMore && !loading) {
             setPage(prevPage => prevPage + 1);
+            fetchContacts(page + 1);
         }
     };
 
@@ -82,19 +118,27 @@ const ContactItem = () => {
 
     return (
         <View style={[styles.container, isDarkTheme ? styles.darkBackground : styles.lightBackground]}>
+            <TextInput
+                style={styles.searchBar}
+                placeholder="Search contacts..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+            />
+            
             {loading && contacts.length === 0 ? (
                 <ActivityIndicator size="large" color="#0000ff" />
             ) : (
                 <FlatList
-                    data={contacts}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    onEndReached={loadMoreContacts}
-                    onEndReachedThreshold={0.5}
-                    getItemLayout={(data, index) => (
-                        { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
-                    )}
-                />
+    data={filteredContacts}
+    keyExtractor={keyExtractor} // This line remains unchanged
+    renderItem={renderItem}
+    onEndReached={loadMoreContacts}
+    onEndReachedThreshold={0.5}
+    getItemLayout={(data, index) => (
+        { length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index }
+    )}
+/>
+
             )}
 
             <Modal
@@ -139,6 +183,14 @@ const styles = StyleSheet.create({
     lightBackground: {
         backgroundColor: 'white',
     },
+    searchBar: {
+        width: '100%',
+        padding: 10,
+        marginBottom: 20,
+        borderColor: 'gray',
+        borderWidth: 1,
+        borderRadius: 5,
+    },
     contactItem: {
         padding: 8,
         width: '100%',
@@ -154,7 +206,7 @@ const styles = StyleSheet.create({
     plusContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 10, // Increase padding for better touch area
+        padding: 10,
     },
     plus: {
         fontSize: 34,
@@ -203,9 +255,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     nameContainer: {
-        flex: 1, // Use full available space
+        flex: 1,
         justifyContent: 'center',
-        paddingVertical: 1, // Add vertical padding for touch area
+        paddingVertical: 1,
     },
 });
 

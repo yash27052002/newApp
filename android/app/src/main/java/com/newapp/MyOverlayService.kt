@@ -186,46 +186,50 @@ class MyOverlayService : Service() {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!it.isSuccessful) {
-                        mainHandler.post {
-                            textView.text = "Unexpected response: ${it.code}"
-                        }
-                        return
-                    }
-
-                    // Get the response data
-                    val responseData = it.body?.string()
-                    mainHandler.post {
-                        Log.d("MyOverlayService", "Response Data: $responseData")
-                        if (responseData != null) {
-                            try {
-                                val jsonObject = JSONObject(responseData)
-
-                                // Check the status field
-                                val status = jsonObject.getInt("status")
-                                if (status == 0) {
-                                    // Success, retrieve the data object
-                                    val data = jsonObject.getJSONObject("data")
-
-                                    // Directly retrieve and display the "notes" field
-                                    val notes = data.getString("notes")
-                                    textView.text = notes  // Display the notes directly
-                                } else {
-                                    // Status is not 0, display the message
-                                    val message = jsonObject.getString("message")
-                                    textView.text = message
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                textView.text = "Error parsing data: ${e.message}"
-                            }
-                        } else {
-                            textView.text = "Error: No response data"
-                        }
-                    }
-                }
+    response.use {
+        if (!it.isSuccessful) {
+            mainHandler.post {
+                textView.text = "Unexpected response: ${it.code}"
             }
+            return
+        }
+
+        val responseData = it.body?.string()
+        mainHandler.post {
+            Log.d("MyOverlayService", "Response Data: $responseData")
+            if (responseData != null) {
+                try {
+                    val jsonObject = JSONObject(responseData)
+
+                    // Check the status field
+                    val status = jsonObject.getInt("status")
+                    if (status == 0) {
+                        // Check if "data" is present and not null
+                        if (!jsonObject.isNull("data")) {
+                            val data = jsonObject.getJSONObject("data")
+
+                            // Directly retrieve and display the "notes" field
+                            val notes = data.getString("notes")
+                            textView.text = notes  // Display the notes directly
+                        } else {
+                            textView.text = "Error: Data is null"
+                        }
+                    } else {
+                        // Status is not 0, display the message
+                        val message = jsonObject.getString("message")
+                        textView.text = message
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    textView.text = "Error parsing data: ${e.message}"
+                }
+            } else {
+                textView.text = "Error: No response data"
+            }
+        }
+    }
+}
+
         })
     }
 
